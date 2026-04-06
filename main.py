@@ -66,68 +66,112 @@ SOURCES = [
     # Добавьте свои ссылки сюда
 ]
 
-def is_base64(s):
-    """Простая проверка, является ли строка Base64"""
-    if '://' in s: 
-        return False # Если есть протокол, это открытый текст
-    try:
-        # Добавляем паддинг, если его не хватает
-        padded_s = s + '=' * (-len(s) % 4)
-        decoded = base64.b64decode(padded_s)
-        # Проверяем, что результат действительно можно декодировать как utf-8 текст (подписку)
-        decoded.decode('utf-8')
-        return True
-    except Exception:
-        return False
+# Поддерживаемые протоколы
+PROTOCOLS = ["vmess://", "vless://", "trojan://", "ss://", "ssr://",
+             "hy2://", "hysteria2://", "tuic://", "warp://"]
+
+
+def parse_content(content):
+    """
+    Обрабатывает контент источника: и plain-text, и base64, и смешанный формат.
+    Каждая строка обрабатывается индивидуально.
+    """
+    result = []
+
+    for line in content.splitlines():
+        line = line.strip()
+
+        # Пропускаем пустые строки и комментарии
+        if not line or line.startswith('#'):
+            continue
+
+        # Строка уже является готовым конфигом
+        if any(line.startswith(p) for p in PROTOCOLS):
+            result.append(line)
+            continue
+
+        # Пробуем декодировать строку как base64
+        try:
+            padded = line + '=' * (-len(line) % 4)
+            decoded = base64.b64decode(padded).decode('utf-8', errors='ignore')
+
+            # Проверяем что внутри есть конфиги
+            if any(p in decoded for p in PROTOCOLS):
+                for decoded_line in decoded.splitlines():
+                    decoded_line = decoded_line.strip()
+                    if decoded_line and any(decoded_line.startswith(p) for p in PROTOCOLS):
+                        result.append(decoded_line)
+        except Exception:
+            # Не base64 и не конфиг — пропускаем
+            pass
+
+    return result
+
 
 def get_v2ray_sources():
     final_config_list = []
+    success_count = 0
+    fail_count = 0
 
-    for url in SOURCES:
+    for i, url in enumerate(SOURCES, 1):
+        short = url.split('/')[-1] or url.split('/')[-2]
         try:
-            # Запрашиваем файл
             response = requests.get(url, timeout=15)
-            response.raise_for_status() # Проверка на ошибки HTTP (например 404)
+            response.raise_for_status()
             content = response.text.strip()
-            
+
             if not content:
+                print(f"[{i}/{len(SOURCES)}] ⚠ Пусто: {short}")
                 continue
 
-            # Проверяем на Base64
-            if is_base64(content):
-                padded_content = content + '=' * (-len(content) % 4)
-                decoded_bytes = base64.b64decode(padded_content)
-                decoded_content = decoded_bytes.decode('utf-8', errors='ignore')
-            else:
-                decoded_content = content
-
-            # Разбиваем на строки, фильтруем пустые
-            lines = [line.strip() for line in decoded_content.splitlines() if line.strip()]
+            lines = parse_content(content)
             final_config_list.extend(lines)
+            success_count += 1
+            print(f"[{i}/{len(SOURCES)}] ✓ {short}: {len(lines)} конфигов")
 
         except Exception as e:
-            print(f"Ошибка при обработке {url}: {e}")
+            fail_count += 1
+            print(f"[{i}/{len(SOURCES)}] ✗ {short}: {e}")
 
-    # Удаляем дубликаты (с помощью set) и возвращаем список обратно
+    # Убираем дубликаты
     unique_configs = list(set(final_config_list))
-    print(f"Собрано уникальных ссылок: {len(unique_configs)}")
-    
+
+    print(f"\n{'='*50}")
+    print(f"Источников успешно: {success_count} / {len(SOURCES)}")
+    print(f"Источников с ошибкой: {fail_count}")
+    print(f"Всего конфигов (с дублями): {len(final_config_list)}")
+    print(f"Уникальных конфигов: {len(unique_configs)}")
+
+    # Статистика по протоколам
+    print(f"\nСтатистика по протоколам:")
+    for p in PROTOCOLS:
+        count = sum(1 for c in unique_configs if c.startswith(p))
+        if count > 0:
+            print(f"  {p:<15} {count}")
+    print(f"{'='*50}\n")
+
     return '\n'.join(unique_configs)
 
+
 def main():
-    print("Начинаем сбор конфигов...")
+    print("Начинаем сбор конфигов...\n")
     content = get_v2ray_sources()
-    
-    # Кодируем финальный список в формат Base64
+
+    if not content.strip():
+        print("Ошибка: не удалось собрать ни одного конфига!")
+        return
+
+    # Кодируем финальный список в Base64
     output_bytes = base64.b64encode(content.encode('utf-8'))
     output_str = output_bytes.decode('utf-8')
-    
+
     # Сохраняем результат в файл
     output_file = 'sub.txt'
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(output_str)
-        
-    print(f"Готово! Закодированный список сохранен в {output_file}")
+
+    print(f"Готово! Закодированный список сохранён в {output_file}")
+
 
 if __name__ == "__main__":
     main()
