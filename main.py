@@ -62,7 +62,10 @@ SOURCES = [
     "https://raw.githubusercontent.com/F0rc3Run/F0rc3Run/refs/heads/main/splitted-by-protocol/vmess.txt",
     "https://raw.githubusercontent.com/F0rc3Run/F0rc3Run/refs/heads/main/splitted-by-protocol/vless.txt",
     "https://raw.githubusercontent.com/F0rc3Run/F0rc3Run/refs/heads/main/splitted-by-protocol/trojan.txt",
-    "https://raw.githubusercontent.com/F0rc3Run/F0rc3Run/refs/heads/main/splitted-by-protocol/shadowsocks.txt"
+    "https://raw.githubusercontent.com/F0rc3Run/F0rc3Run/refs/heads/main/splitted-by-protocol/shadowsocks.txt",
+    "https://raw.githubusercontent.com/Argh94/Proxy-List/refs/heads/main/Hysteria2.txt",
+    "https://raw.githubusercontent.com/Argh94/Proxy-List/refs/heads/main/ShadowSocks.txt",
+    "https://raw.githubusercontent.com/Argh94/Proxy-List/refs/heads/main/Trojan.txt",
     # Добавьте свои ссылки сюда
 ]
 
